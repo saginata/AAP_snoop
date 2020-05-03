@@ -4,21 +4,42 @@ import datetime
 import keyboard
 ser = serial.Serial('COM6', 57600, timeout=0.001)
 logfile = open("messagelog.txt", "a")
-inputfile = open("fromcar.txt", "r")
+inputfile = open("fromphone.txt", "r")
+dbfile = open("CommandDB.csv", "r")
 # ser.write(b'\xFF\xFF\x55\x03\x00\x01\x04\xF8\xFF\x55\x06\x03\xCD\xFF\xFF\xFF\xFF\xFF\x55\x02\x03\xCD\xFF\x55\x04')
 # ser.write(b'\xFF\x55\x02\x00\x03\xFC\xFF\x55\x03\x04\x00\x1E\xDB\xFF\x55\x03\x04\x00\x1C\xDD\xFF\x55\xFF\x55\xFF\x55\xFF\x55')
+
+commands = []
+descriptions = []
+while 1:
+    templine = dbfile.readline()
+    if len(templine) == 0:
+        break
+
+    templinelist = templine.split(";")
+    commands.append(templinelist[0])
+    descriptions.append(templinelist[1][:-1])
 message = []
 
+
+fromfile = True
+
+if fromfile:
+    templine = inputfile.readline()
+    templinelist = templine.split(" ")
+    readTs = float(templinelist[0])
+    messagestr = templinelist[1][:-1]
+    message = [messagestr[i:i+2] for i in range(0, len(messagestr), 2)]
 
 # temporary loop, will make it infinite with breaks later
 # for k in range(23):
 while 1:
     # idle if buffer empty
-    while ser.in_waiting == 0:
-        time.sleep(0.001)
+    # while ser.in_waiting == 0:
+        # time.sleep(0.001)
     # read one byte of the message
-    rx = ser.read().hex()
-    message.append(rx)
+    # rx = ser.read().hex()
+    # message.append(rx)
 
     mes_size = 0
     mes_ok = False
@@ -36,8 +57,8 @@ while 1:
             csum = csum + int(k, 16)
         csum = csum % 256
         csum = 256-csum
-        #print(csum, end=' should be ')
-        #print(int(message[-1], 16))
+        # print(csum, end=' should be ')
+        # print(int(message[-1], 16))
 
         if csum == int(message[-1], 16):
             mes_ok = True
@@ -47,6 +68,12 @@ while 1:
         # timestamp
         ts_str = str(datetime.datetime.now().time())
         print('[' + ts_str + '  OK ] ', end=' ')
+
+        # description
+        commandToFind = message[3] + message[4]
+        if message[3] == "04":
+            commandToFind = commandToFind + message[5]
+        print(descriptions[commands.index(commandToFind)].ljust(30), end=" ")
 
         # message
         for k in message:
@@ -63,7 +90,7 @@ while 1:
 
     # if not ended correctly
     elif len(message) >= 2 and message[-2] == 'ff' and message[-1] == '55':
-
+        print("should never be here")  # remove this later
         # remove it from the current message
         message = message[:-2]
 
@@ -92,9 +119,37 @@ while 1:
         message.append('ff')
         message.append('55')
 
+    # if reading from file, the broken messages are split out already, so just print them out
+    elif fromfile:
+        # timestamp
+        ts_str = str(datetime.datetime.now().time())
+        print('[' + ts_str + ' NOK ] ', end=' ')
+
+        # message
+        for k in message:
+            print(k.upper(), end=' ')
+        print('')
+
+        # logfile
+        logfile.write(str(time.time())+" ")
+        for k in message:
+            logfile.write(k)
+        logfile.write("\n")
+
+    templine = inputfile.readline()
+    if len(templine) == 0:
+        break
+
+    templinelist = templine.split(" ")
+    readTs = float(templinelist[0])
+    messagestr = templinelist[1][:-1]
+    message = [messagestr[i:i+2] for i in range(0, len(messagestr), 2)]
+
 # empty the buffer
 ser.read(100)
 logfile.close()
+inputfile.close()
+dbfile.close()
 ser.close()
 
 
