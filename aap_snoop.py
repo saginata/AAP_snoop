@@ -7,10 +7,12 @@ logfile = open("messagelog.txt", "a")
 inputfile = open("fromphone.txt", "r")
 dbfile = open("CommandDB.csv", "r")
 # ser.write(b'\xFF\xFF\x55\x03\x00\x01\x04\xF8\xFF\x55\x06\x03\xCD\xFF\xFF\xFF\xFF\xFF\x55\x02\x03\xCD\xFF\x55\x04')
-# ser.write(b'\xFF\x55\x02\x00\x03\xFC\xFF\x55\x03\x04\x00\x1E\xDB\xFF\x55\x03\x04\x00\x1C\xDD\xFF\x55\xFF\x55\xFF\x55\xFF\x55')
+ser.write(b'\xff\x55\x08\x04\x00\x27\x04\x00\x02\x33\x27\x6d')
 
 commands = []
 descriptions = []
+translModes = []
+
 while 1:
     templine = dbfile.readline()
     if len(templine) == 0:
@@ -18,11 +20,12 @@ while 1:
 
     templinelist = templine.split(";")
     commands.append(templinelist[0])
-    descriptions.append(templinelist[1][:-1])
+    descriptions.append(templinelist[1])
+    translModes.append(templinelist[2][:-1])
 message = []
 
 
-fromfile = True
+fromfile = False
 
 if fromfile:
     templine = inputfile.readline()
@@ -35,11 +38,12 @@ if fromfile:
 # for k in range(23):
 while 1:
     # idle if buffer empty
-    # while ser.in_waiting == 0:
-        # time.sleep(0.001)
-    # read one byte of the message
-    # rx = ser.read().hex()
-    # message.append(rx)
+    if not fromfile:
+        while ser.in_waiting == 0:
+            time.sleep(0.001)
+        # read one byte of the message
+        rx = ser.read().hex()
+        message.append(rx)
 
     mes_size = 0
     mes_ok = False
@@ -74,10 +78,45 @@ while 1:
         if message[3] == "04":
             commandToFind = commandToFind + message[5]
         print(descriptions[commands.index(commandToFind)].ljust(30), end=" ")
+        # print(translModes[commands.index(commandToFind)], end=" ")
 
-        # message
-        for k in message:
-            print(k.upper(), end=' ')
+        # raw
+        if translModes[commands.index(commandToFind)] == "0":
+            payload = message[6:-1]
+            if message[3] == "00":
+                payload.insert(0, message[5])
+            print("\"" + ''.join(i for i in payload) + "\"", end=' ')
+
+        # number
+        if translModes[commands.index(commandToFind)] == "1":
+            payload = message[6:-1]
+            if message[3] == "00":
+                payload.insert(0, message[5])
+            print("\"" + ''.join(i for i in payload) + "\"", end=' ')
+
+        # string
+        if translModes[commands.index(commandToFind)] == "2":
+            payload = message[6:]
+            if message[3] == "00":
+                payload.insert(0, message[5])
+
+            payloadint = [int(i, 16) for i in payload]
+            print("\"" + ''.join(chr(i) for i in payloadint) + "\"", end=' ')
+
+        # rawer
+        if translModes[commands.index(commandToFind)] == "3":
+            for k in message:
+                print(k.upper(), end=' ')
+
+        # timeelapsed
+        if translModes[commands.index(commandToFind)] == "4":
+            payload = message[7:-1]
+            payloadstr = ''.join(i for i in payload)
+            if len(payloadstr) == 8:
+                print(int(payloadstr, 16)/1000, end=' ')
+            else:
+                print("TRANS ERROR\"" + ''.join(i for i in message) + "\"", end=' ')
+
         print('')
 
         # logmessage
@@ -140,10 +179,11 @@ while 1:
     if len(templine) == 0:
         break
 
-    templinelist = templine.split(" ")
-    readTs = float(templinelist[0])
-    messagestr = templinelist[1][:-1]
-    message = [messagestr[i:i+2] for i in range(0, len(messagestr), 2)]
+    if fromfile:
+        templinelist = templine.split(" ")
+        readTs = float(templinelist[0])
+        messagestr = templinelist[1][:-1]
+        message = [messagestr[i:i+2] for i in range(0, len(messagestr), 2)]
 
 # empty the buffer
 ser.read(100)
