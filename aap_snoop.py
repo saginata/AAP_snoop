@@ -7,11 +7,12 @@ logfile = open("messagelog.txt", "a")
 inputfile = open("fromphone.txt", "r")
 dbfile = open("CommandDB.csv", "r")
 # ser.write(b'\xFF\xFF\x55\x03\x00\x01\x04\xF8\xFF\x55\x06\x03\xCD\xFF\xFF\xFF\xFF\xFF\x55\x02\x03\xCD\xFF\x55\x04')
-ser.write(b'\xff\x55\x08\x04\x00\x27\x04\x00\x02\x33\x27\x6d')
+# ser.write(b'\xff\x55\x08\x04\x00\x27\x04\x00\x02\x33\x27\x6d')
 
-commands = []
-descriptions = []
-translModes = []
+commands = ["FFFF"]
+descriptions = ["UNKNOWN COMMAND"]
+translModes = ["3"]
+
 
 while 1:
     templine = dbfile.readline()
@@ -25,7 +26,7 @@ while 1:
 message = []
 
 
-fromfile = False
+fromfile = True
 
 if fromfile:
     templine = inputfile.readline()
@@ -68,6 +69,7 @@ while 1:
             mes_ok = True
 
     if mes_ok:
+        foundIndex = 0
 
         # timestamp
         ts_str = str(datetime.datetime.now().time())
@@ -77,25 +79,28 @@ while 1:
         commandToFind = message[3] + message[4]
         if message[3] == "04":
             commandToFind = commandToFind + message[5]
-        print(descriptions[commands.index(commandToFind)].ljust(30), end=" ")
+        if commandToFind in commands:
+            foundIndex = commands.index(commandToFind)
+
+        print(descriptions[foundIndex].ljust(30), end=" ")
         # print(translModes[commands.index(commandToFind)], end=" ")
 
         # raw
-        if translModes[commands.index(commandToFind)] == "0":
+        if translModes[foundIndex] == "0":
             payload = message[6:-1]
             if message[3] == "00":
                 payload.insert(0, message[5])
             print("\"" + ''.join(i for i in payload) + "\"", end=' ')
 
         # number
-        if translModes[commands.index(commandToFind)] == "1":
+        if translModes[foundIndex] == "1":
             payload = message[6:-1]
             if message[3] == "00":
                 payload.insert(0, message[5])
             print("\"" + ''.join(i for i in payload) + "\"", end=' ')
 
         # string
-        if translModes[commands.index(commandToFind)] == "2":
+        if translModes[foundIndex] == "2":
             payload = message[6:]
             if message[3] == "00":
                 payload.insert(0, message[5])
@@ -104,12 +109,12 @@ while 1:
             print("\"" + ''.join(chr(i) for i in payloadint) + "\"", end=' ')
 
         # rawer
-        if translModes[commands.index(commandToFind)] == "3":
+        if translModes[foundIndex] == "3":
             for k in message:
                 print(k.upper(), end=' ')
 
         # timeelapsed
-        if translModes[commands.index(commandToFind)] == "4":
+        if translModes[foundIndex] == "4":
             payload = message[7:-1]
             payloadstr = ''.join(i for i in payload)
             if len(payloadstr) == 8:
