@@ -1,22 +1,35 @@
 import serial
 import time
 import datetime
-import keyboard
 
-fromfile = True
-if not fromfile:
-    ser = serial.Serial('COM6', 57600, timeout=0.001)
+
+ser = serial.Serial('COM6', 57600, timeout=0.001)
+
 logfile = open("messagelog.txt", "a")
-inputfile = open("fromcar.txt", "r")
 dbfile = open("CommandDB.csv", "r")
-# ser.write(b'\xFF\xFF\x55\x03\x00\x01\x04\xF8\xFF\x55\x06\x03\xCD\xFF\xFF\xFF\xFF\xFF\x55\x02\x03\xCD\xFF\x55\x04')
-# ser.write(b'\xff\x55\x08\x04\x00\x27\x04\x00\x02\x33\x27\x6d')
 
+# ser.write(b'\xff\x55\x08\x04\x00\x27\x04\x00\x02\x33\x27\x6d')
+bytes()
 commands = []
 descriptions = []
 translModes = []
+respModes = []
+responses = []
+
+playlists = ["Main", "Now Playing", "Test"]
+songs = []
+
+songs.append({'Title': 'Piosenka 1', 'Artist': 'Artysta 1',
+              'Album': 'Plyta 1', 'Length': 360})
+songs.append({'Title': 'Piosenka 2', 'Artist': 'Artysta 2',
+              'Album': 'Plyta 2', 'Length': 666})
+songs.append({'Title': 'Piosenka 3', 'Artist': 'Artysta 3',
+              'Album': 'Plyta 3', 'Length': 420})
+songs.append({'Title': 'Piosenka 4', 'Artist': 'Artysta 4',
+              'Album': 'Plyta 4', 'Length': 69})
 
 
+# load command database
 while 1:
     templine = dbfile.readline()
     if len(templine) == 0:
@@ -25,31 +38,22 @@ while 1:
     templinelist = templine.split(";")
     commands.append(templinelist[0])
     descriptions.append(templinelist[1])
-    translModes.append(templinelist[2][:-1])
+    translModes.append(templinelist[2])
+    respModes.append(templinelist[3])
+    responses.append(templinelist[4][:-1])
 message = []
 
-
-if fromfile:
-    templine = inputfile.readline()
-    templinelist = templine.split(" ")
-    readTs = float(templinelist[0])
-    messagestr = templinelist[1][:-1]
-    message = [messagestr[i:i+2] for i in range(0, len(messagestr), 2)]
-
-# temporary loop, will make it infinite with breaks later
-# for k in range(23):
 while 1:
     mes_size = 0
     mes_ok = False
 
-    # idle if buffer empty
-    if not fromfile:
-        while ser.in_waiting == 0:
-            time.sleep(0.001)
-        # read one byte of the message
-        rx = ser.read().hex()
-        message.append(rx)
-    # region message checking
+    while ser.in_waiting == 0:
+        time.sleep(0.001)
+
+    # read one byte of the message
+    rx = ser.read().hex()
+    message.append(rx)
+
     # record the expected size if message long enough to have one
     if len(message) >= 3:
         mes_size = int(message[2], 16)+1
@@ -57,24 +61,24 @@ while 1:
     # if expected length reached
     if len(message)-3 == mes_size:
 
-        # CSUM
+        # Checksum
         csum = 0
         for k in message[2:-1]:
             csum = csum + int(k, 16)
         csum = csum % 256
         csum = 256-csum
-        # print(csum, end=' should be ')
-        # print(int(message[-1], 16))
 
         if csum == int(message[-1], 16):
             mes_ok = True
-    # endregion
+
     if mes_ok:
+
+        # region print and log
         foundIndex = 0
 
         # timestamp
         ts_str = str(datetime.datetime.now().time())
-        print('[' + ts_str + '] ', end=' ')
+        print('[' + ts_str + ']', end=' ')
 
         # description
         commandToFind = message[3] + message[4]
@@ -131,8 +135,33 @@ while 1:
         for k in message:
             logfile.write(k)
         logfile.write("\n")
+
+        # endregion
+
+        # region Respond
+        if respModes[foundIndex] == '0':
+            print('[' + ts_str + ']', end=' ')
+            print("Not responding")
+            logfile.write(str(time.time()) + " Not responding\n")
+        elif respModes[foundIndex] == '1':
+            responseStr = responses[foundIndex]
+
+            print('[' + ts_str + ']', end=' ')
+            print("Responding ", end=' ')
+            print(responseStr)
+
+            logfile.write(str(time.time()) +
+                          " Responding " + responseStr + "\n")
+
+            response = bytes.fromhex(responseStr)
+            ser.write(response)
+
+        elif respModes[foundIndex] == '2':
+            abc = 1
+
+        # endregion
         message = []
-    # region cutting out garbled messages
+
     # if not ended correctly
     elif len(message) >= 2 and message[-2] == 'ff' and message[-1] == '55':
 
@@ -144,13 +173,11 @@ while 1:
 
             # timestamp
             ts_str = str(datetime.datetime.now().time())
-            print('[' + ts_str + '] ', end=' ')
-
-            print('GARBLED MESSAGE RECEIVED', end=' ')
+            print('[' + ts_str + ' NOK ] ', end=' ')
 
             # message
             for k in message:
-                print(k.upper(), end='')
+                print(k.upper(), end=' ')
             print('')
 
             # logfile
@@ -165,45 +192,7 @@ while 1:
         message = []
         message.append('ff')
         message.append('55')
-    # endregion
-    # if reading from file, the broken messages are split out already, so just print them out
-    elif fromfile:
-        # timestamp
-        ts_str = str(datetime.datetime.now().time())
-        print('[' + ts_str + ' NOK ] ', end=' ')
-
-        # message
-        for k in message:
-            print(k.upper(), end=' ')
-        print('')
-
-        # logfile
-        logfile.write(str(time.time())+" ")
-        for k in message:
-            logfile.write(k)
-        logfile.write("\n")
-
-    templine = inputfile.readline()
-    if len(templine) == 0:
-        break
-
-    if fromfile:
-        templinelist = templine.split(" ")
-        readTs = float(templinelist[0])
-        messagestr = templinelist[1][:-1]
-        message = [messagestr[i:i+2] for i in range(0, len(messagestr), 2)]
-
-# empty the buffer
-if not fromfile:
-    ser.read(100)
-    ser.close()
+ser.read(100)
+ser.close()
 logfile.close()
-inputfile.close()
 dbfile.close()
-
-
-# while 1:
-#     time.sleep(0.1)
-#     print('.')
-#     if keyboard.is_pressed('y'):
-#         break
