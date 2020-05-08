@@ -27,6 +27,11 @@ def checksum(checkStr):
     return f"{csum:0{2}x}"
 
 
+trackPos = 10000
+trackLen = 69000
+playmode = 2
+
+
 ser = serial.Serial('COM6', 57600, timeout=0.001)
 
 logfile = open("messagelog.txt", "a")
@@ -223,6 +228,7 @@ while 1:
 
             # GetNamesRange
             elif commandToFind == '04001a':
+
                 # fixed part of the message
                 responseStr = 'ff550704001b'
 
@@ -248,7 +254,6 @@ while 1:
                         stringsToSend.append(Albums[i+startIndex])
                 # list tracks
                 elif payload[0] == '05':
-                    '
                     for i in range(count):
                         indexes.append(i+startIndex)
                         stringsToSend.append(songs[i+startIndex]['Title'])
@@ -269,6 +274,19 @@ while 1:
                     responseStr = responseStr + checksumStr
                     send_response(responseStr)
 
+            # GetPlayStatus
+            elif commandToFind == '04001c':
+                # fixed part of the message
+                responseStr = 'ff550c04001d'
+
+                trackLenStr = f"{trackLen:0{8}x}"
+                trackPosStr = f"{trackPos:0{8}x}"
+                playModeStr = f"{playmode:0{2}x}"
+
+                responseStr = responseStr + trackLenStr + trackPosStr + playModeStr
+                checksumStr = checksum(responseStr)
+                responseStr = responseStr + checksumStr
+                send_response(responseStr)
         # endregion
         # ready for next message
 
