@@ -1,4 +1,4 @@
-FFFF;UNKNOWN MESSAGE;0;0;0
+FFFF;UNKNOWN MESSAGE;3;0;0
 0002;ACK;0;0;0
 0003;RequestRemoteUIMode;0;0;0
 0004;ReturnRemoteUIMode;0;0;0
@@ -24,19 +24,19 @@ FFFF;UNKNOWN MESSAGE;0;0;0
 04000d;FuckKnowsResponse;0;0;0
 040016;SwitchToMainLibrary;0;1;ff5506040001000016df
 040017;SwitchItemNoType;0;0;0
-040018;GetCountOfType;0;0;0
+040018;GetCountOfType;0;2;0
 040019;AmountOfType;1;0;0
-04001a;GetNamesRange;0;0;0
+04001a;GetNamesRange;0;2;0
 04001b;OffsetNameOfItem;2;0;0
-04001c;GetTimeAndStatus;0;0;0
+04001c;GetTimeAndStatus;0;2;0
 04001d;TrackLengthElapsedStatus;0;0;0
-04001e;GetPlaylistPos;0;0;0
+04001e;GetPlaylistPos;0;2;0
 04001f;RetPlaylistPos;1;0;0
-040020;GetTitleOfSongNo;0;0;0
+040020;GetTitleOfSongNo;0;2;0
 040021;RetTitle;2;0;0
-040022;GetArtistOfSongNo;0;0;0
+040022;GetArtistOfSongNo;0;2;0
 040023;RetArtist;2;0;0
-040024;GetAlbumOfSongNo;0;0;0
+040024;GetAlbumOfSongNo;0;2;0
 040025;RetAlbum;2;0;0
 040026;PolingModeStartStop;0;1;ff5506040001000026cf
 040027;TimeElapsedSong;4;0;0
