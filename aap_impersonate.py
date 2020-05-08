@@ -248,6 +248,7 @@ while 1:
                         stringsToSend.append(Albums[i+startIndex])
                 # list tracks
                 elif payload[0] == '05':
+                    '
                     for i in range(count):
                         indexes.append(i+startIndex)
                         stringsToSend.append(songs[i+startIndex]['Title'])
